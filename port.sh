@@ -502,58 +502,7 @@ blue "复制设备特性XML文件"
 cp -rf  build/baserom/images/product/etc/device_features/* build/portrom/images/product/etc/device_features/
 
 # A13-14 启动校验破解
-blue "触控优化" "Touch optimization"
-echo "ro.surface_flinger.use_content_detection_for_refresh_rate=true" >> build/portrom/images/vendor/default.prop
-echo "ro.surface_flinger.set_idle_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-echo "ro.surface_flinger.set_touch_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-echo "ro.surface_flinger.set_display_power_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-APKTOOL="java -jar $work_dir/bin/apktool/apktool.jar"
-mkdir -p tmp/
-blue "开始移除 Android 签名校验" "Disalbe Android 14 Apk Signature Verfier"
-cp -rf build/portrom/images/system/system/framework/services.jar tmp/services.apk
-pushd tmp/
-$APKTOOL d -q services.apk
-target_method='getMinimumSignatureSchemeVersionForTargetSdk'
-find services/smali_classes2/com/android/server/pm/ services/smali_classes2/com/android/server/pm/pkg/parsing/ -type f -maxdepth 1 -name "*.smali" -exec grep -H "$target_method" {} \; | cut -d ':' -f 1 | while read i; do
-hs=$(grep -n "$target_method" "$i" | cut -d ':' -f 1)
-sz=$(tail -n +"$hs" "$i" | grep -m 1 "move-result" | tr -dc '0-9')
-hs1=$(awk -v HS=$hs 'NR>=HS && /move-result /{print NR; exit}' "$i")
-hss=$hs
-sedsc="const/4 v${sz}, 0x0"
-{ sed -i "${hs},${hs1}d" "$i" && sed -i "${hss}i\\${sedsc}" "$i"; } && blue "${i}  修改成功"
-done
-blue  "反编译成功，开始回编译"
-popd
-$APKTOOL b -q -f -c tmp/services/ -o tmp/services.jar
-
-cp -rfv tmp/services.jar build/portrom/images/system/system/framework/services.jar
-# 屏幕密度修修改
-for prop in $(find build/baserom/images/product build/baserom/images/system -type f -name "build.prop");do
-    base_rom_density=$(< "$prop" grep "ro.sf.lcd_density" |awk 'NR==1' |cut -d '=' -f 2)
-    if [ "${base_rom_density}" != "" ];then
-        green "底包屏幕密度值 ${base_rom_density}" "Screen density: ${base_rom_density}"
-        break 
-    fi
-done
-
-# 未在底包找到则默认440,如果是其他值可自己修改
-[ -z ${base_rom_density} ] && base_rom_density=440
-
-found=0
-for prop in $(find build/portrom/images/product build/portrom/images/system -type f -name "build.prop");do
-    if grep -q "ro.sf.lcd_density" ${prop};then
-        sed -i "s/ro.sf.lcd_density=.*/ro.sf.lcd_density=${base_rom_density}/g" ${prop}
-        found=1
-    fi
-    sed -i "s/persist.miui.density_v2=.*/persist.miui.density_v2=${base_rom_density}/g" ${prop}
-done
-
-if [ $found -eq 0  ]; then
-        blue "未找到ro.fs.lcd_density，build.prop新建一个值$base_rom_density" "ro.fs.lcd_density not found, create a new value ${base_rom_density} "
-        echo "ro.sf.lcd_density=${base_rom_density}" >> build/portrom/images/product/etc/build.prop
-fi
-
-
+patch_smali "framework.jar" "ApkSignatureVerifier.smali" "const\/4 v0, 0x2" "const\/4 v0, 0x1" 
 # 人脸
 baseMiuiBiometric=$(find build/baserom/images/product/app -type d -name "MiuiBiometric*")
 portMiuiBiometric=$(find build/portrom/images/product/app -type d -name "MiuiBiometric*")
