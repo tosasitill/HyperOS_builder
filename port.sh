@@ -906,7 +906,7 @@ if [[ "$is_ab_device" == false ]];then
 else
     mkdir -p out/hyperos_${device_code}_${port_rom_version}/images/
     mv -f build/portrom/images/super.zst out/hyperos_${device_code}_${port_rom_version}/images/
-    cp -rf devices/haydn/ out/hyperos_${device_code}_${port_rom_version}/
+    cp -rf devices/haydn/* out/hyperos_${device_code}_${port_rom_version}/
 fi
 
 find out/hyperos_${device_code}_${port_rom_version} |xargs touch
