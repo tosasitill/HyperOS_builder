@@ -443,21 +443,6 @@ else
 
 fi
 
-baseAospFrameworkResOverlay=$(find build/baserom/images/product -type f -name "AospFrameworkResOverlay.apk")
-portAospFrameworkResOverlay=$(find build/portrom/images/product -type f -name "AospFrameworkResOverlay.apk")
-if [ -f "${baseAospFrameworkResOverlay}" ] && [ -f "${portAospFrameworkResOverlay}" ];then
-    blue "正在替换 [AospFrameworkResOverlay.apk]" "Replacing [AospFrameworkResOverlay.apk]" 
-    cp -rf ${baseAospFrameworkResOverlay} ${portAospFrameworkResOverlay}
-fi
-
-
-#baseAospWifiResOverlay=$(find build/baserom/images/product -type f -name "AospWifiResOverlay.apk")
-##portAospWifiResOverlay=$(find build/portrom/images/product -type f -name "AospWifiResOverlay.apk")
-#if [ -f ${baseAospWifiResOverlay} ] && [ -f ${portAospWifiResOverlay} ];then
-#    blue "正在替换 [AospWifiResOverlay.apk]"
-#    cp -rf ${baseAospWifiResOverlay} ${portAospWifiResOverlay}
-#fi
-
 baseDevicesAndroidOverlay=$(find build/baserom/images/product -type f -name "DevicesAndroidOverlay.apk")
 portDevicesAndroidOverlay=$(find build/portrom/images/product -type f -name "DevicesAndroidOverlay.apk")
 if [ -f "${baseDevicesAndroidOverlay}" ] && [ -f "${portDevicesAndroidOverlay}" ];then
@@ -471,52 +456,6 @@ if [ -f "${baseDevicesOverlay}" ] && [ -f "${portDevicesOverlay}" ];then
     blue "正在替换 [DevicesOverlay.apk]" "Replacing [DevicesOverlay.apk]"
     cp -rf ${baseDevicesOverlay} ${portDevicesOverlay}
 fi
-
-baseSettingsRroDeviceHideStatusBarOverlay=$(find build/baserom/images/product -type f -name "SettingsRroDeviceHideStatusBarOverlay.apk")
-portSettingsRroDeviceHideStatusBarOverlay=$(find build/portrom/images/product -type f -name "SettingsRroDeviceHideStatusBarOverlay.apk")
-if [ -f "${baseSettingsRroDeviceHideStatusBarOverlay}" ] && [ -f "${portSettingsRroDeviceHideStatusBarOverlay}" ];then
-    blue "正在替换 [SettingsRroDeviceHideStatusBarOverlay.apk]" "Replacing [SettingsRroDeviceHideStatusBarOverlay.apk]"
-    cp -rf ${baseSettingsRroDeviceHideStatusBarOverlay} ${portSettingsRroDeviceHideStatusBarOverlay}
-fi
-
-baseMiuiBiometricResOverlay=$(find build/baserom/images/product -type f -name "MiuiBiometricResOverlay.apk")
-portMiuiBiometricResOverlay=$(find build/portrom/images/product -type f -name "MiuiBiometricResOverlay.apk")
-if [ -f "${baseMiuiBiometricResOverlay}" ] && [ -f "${portMiuiBiometricResOverlay}" ];then
-    blue "正在替换 [MiuiBiometricResOverlay.apk]" "Replacing [MiuiBiometricResOverlay.apk]"
-    cp -rf ${baseMiuiBiometricResOverlay} ${portMiuiBiometricResOverlay}
-fi
-
-# radio lib
-# blue "信号相关"
-# for radiolib in $(find build/baserom/images/system/system/lib/ -maxdepth 1 -type f -name "*radio*");do
-#     cp -rf $radiolib build/portrom/images/system/system/lib/
-# done
-
-# for radiolib in $(find build/baserom/images/system/system/lib64/ -maxdepth 1 -type f -name "*radio*");do
-#     cp -rf $radiolib build/portrom/images/system/system/lib64/
-# done
-
-
-# audio lib
-# blue "音频相关"
-# for audiolib in $(find build/baserom/images/system/system/lib/ -maxdepth 1 -type f -name "*audio*");do
-#     cp -rf $audiolib build/portrom/images/system/system/lib/
-# done
-
-# for audiolib in $(find build/baserom/images/system/system/lib64/ -maxdepth 1 -type f -name "*audio*");do
-#     cp -rf $audiolib build/portrom/images/system/system/lib64/
-# done
-
-# # bt lib
-# blue "蓝牙相关"
-# for btlib in $(find build/baserom/images/system/system/lib/ -maxdepth 1 -type f -name "*bluetooth*");do
-#     cp -rf $btlib build/portrom/images/system/system/lib/
-# done
-
-# for btlib in $(find build/baserom/images/system/system/lib64/ -maxdepth 1 -type f -name "*bluetooth*");do
-#     cp -rf $btlib build/portrom/images/system/system/lib64/
-# done
-
 
 # displayconfig id
 rm -rf build/portrom/images/product/etc/displayconfig/display_id*.xml
@@ -643,25 +582,6 @@ if [[ $(echo "$portrom") == *"DEV"* ]];then
     timestamp_11_27_dev=$(date -d "$date_format_11_27_dev" +%s)
     timestamp_current_rom=$(date -d "$date_current_rom" +%s)
 fi
-
-blue "左侧挖孔灵动岛修复" "StrongToast UI fix"
-if [[ "$is_shennong_houji_port" == true ]];then
-    patch_smali "MiuiSystemUI.apk" "MIUIStrongToast\$2.smali" "const\/4 v7\, 0x0" "iget-object v7\, v1\, Lcom\/android\/systemui\/toast\/MIUIStrongToast;->mRLLeft:Landroid\/widget\/RelativeLayout;\\n\\tinvoke-virtual {v7}, Landroid\/widget\/RelativeLayout;->getLeft()I\\n\\tmove-result v7\\n\\tint-to-float v7,v7"
-elif [[ $timestamp_current_rom -gt $timestamp_11_27_dev ]];then
-    patch_smali "MiuiSystemUI.apk" "MIUIStrongToast\$2.smali" "const\/4 v9\, 0x0" "iget-object v9\, v1\, Lcom\/android\/systemui\/toast\/MIUIStrongToast;->mRLLeft:Landroid\/widget\/RelativeLayout;\\n\\tinvoke-virtual {v9}, Landroid\/widget\/RelativeLayout;->getLeft()I\\n\\tmove-result v9\\n\\tint-to-float v9,v9"
-else
-    patch_smali "MiuiSystemUI.apk" "MIUIStrongToast\$2.smali" "const\/4 v10\, 0x0" "iget-object v10\, v1\, Lcom\/android\/systemui\/toast\/MIUIStrongToast;->mRLLeft:Landroid\/widget\/RelativeLayout;\\n\\tinvoke-virtual {v10}, Landroid\/widget\/RelativeLayout;->getLeft()I\\n\\tmove-result v10\\n\\tint-to-float v10,v10"
-fi
-
-if [[ "$is_shennong_houji_port" == true ]];then
-    blue "开启HyperMind功能，移植包为14系列AI开发版(23.11.30 Dev) " "Enable hypermind feature( AI dev verison needed)"
-
-     patch_smali "MiLinkCirculateMIUI15.apk" "com/milink/hmindlib/j.smali" ".method public final B()Z" ".method public final B()Z \n\n\t.registers 1 \n\n\tconst\/4 v0,0x1\n\n\treturn v0\n.end method\n\n.method public final B_bak()Z"
-      
-fi
-
-blue "解除状态栏通知个数限制(默认最大6个)" "Set SystemUI maxStaticIcons to 6 by default."
-patch_smali "MiuiSystemUI.apk" "NotificationIconAreaController.smali" "iput p10, p0, Lcom\/android\/systemui\/statusbar\/phone\/NotificationIconContainer;->mMaxStaticIcons:I" "const\/4 p10, 0x6\n\n\tiput p10, p0, Lcom\/android\/systemui\/statusbar\/phone\/NotificationIconContainer;->mMaxStaticIcons:I"
 
 if [[ ${is_eu_rom} == "true" ]];then
     patch_smali "miui-services.jar" "SystemServerImpl.smali" ".method public constructor <init>()V/,/.end method" ".method public constructor <init>()V\n\t.registers 1\n\tinvoke-direct {p0}, Lcom\/android\/server\/SystemServerStub;-><init>()V\n\n\treturn-void\n.end method" "regex"
@@ -819,37 +739,6 @@ for i in $(find build/portrom/images -type f -name "build.prop");do
         sed -i "s/ro.build.host=.*/ro.build.host=${build_host}/g" ${i}
     fi
 done
-
-#sed -i -e '$a\'$'\n''persist.adb.notify=0' build/portrom/images/system/system/build.prop
-#sed -i -e '$a\'$'\n''persist.sys.usb.config=mtp,adb' build/portrom/images/system/system/build.prop
-#sed -i -e '$a\'$'\n''persist.sys.disable_rescue=true' build/portrom/images/system/system/build.prop
-#sed -i -e '$a\'$'\n''persist.miui.extm.enable=0' build/portrom/images/system/system/build.prop
-
-# 屏幕密度修修改
-for prop in $(find build/baserom/images/product build/baserom/images/system -type f -name "build.prop");do
-    base_rom_density=$(< "$prop" grep "ro.sf.lcd_density" |awk 'NR==1' |cut -d '=' -f 2)
-    if [ "${base_rom_density}" != "" ];then
-        green "底包屏幕密度值 ${base_rom_density}" "Screen density: ${base_rom_density}"
-        break 
-    fi
-done
-
-# 未在底包找到则默认440,如果是其他值可自己修改
-[ -z ${base_rom_density} ] && base_rom_density=440
-
-found=0
-for prop in $(find build/portrom/images/product build/portrom/images/system -type f -name "build.prop");do
-    if grep -q "ro.sf.lcd_density" ${prop};then
-        sed -i "s/ro.sf.lcd_density=.*/ro.sf.lcd_density=${base_rom_density}/g" ${prop}
-        found=1
-    fi
-    sed -i "s/persist.miui.density_v2=.*/persist.miui.density_v2=${base_rom_density}/g" ${prop}
-done
-
-if [ $found -eq 0  ]; then
-        blue "未找到ro.fs.lcd_density，build.prop新建一个值$base_rom_density" "ro.fs.lcd_density not found, create a new value ${base_rom_density} "
-        echo "ro.sf.lcd_density=${base_rom_density}" >> build/portrom/images/product/etc/build.prop
-fi
 
 echo "ro.miui.cust_erofs=0" >> build/portrom/images/product/etc/build.prop
 
@@ -1020,7 +909,7 @@ for pname in ${super_list};do
     rm -rf build/portrom/images/${pname}.img
 done
 
-os_type="hyperos"
+os_type="HyperOS"
 if [[ ${is_eu_rom} == true ]];then
     os_type="xiaomi.eu"
 fi
