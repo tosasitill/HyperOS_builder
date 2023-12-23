@@ -908,7 +908,7 @@ else
     mv -f build/portrom/images/super.zst out/hyperos_${device_code}_${port_rom_version}/images/
     ls devices
     ls devices/haydn/
-    cp -rf devices/haydn/ out/hyperos_${device_code}_${port_rom_version}/
+    cp -rf devices/haydn/* out/hyperos_${device_code}_${port_rom_version}/
 fi
 
 find out/hyperos_${device_code}_${port_rom_version} |xargs touch
