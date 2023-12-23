@@ -946,9 +946,9 @@ if [[ "$is_ab_device" == false ]];then
     sed -i "s/device_code/${base_rom_code}/g" out/${os_type}_${device_code}_${port_rom_version}/META-INF/com/google/android/update-binary
 
 else
-        mkdir -p out/hyperos_${device_code}_${port_rom_version}/images/
-        mv -f build/portrom/images/super.zst out/hyperos_${device_code}_${port_rom_version}/images/
-        cp -rf devices/haydn/* out/hyperos_${device_code}_${port_rom_version}/
+    mkdir -p out/hyperos_${device_code}_${port_rom_version}/images/
+    mv -f build/portrom/images/super.zst out/hyperos_${device_code}_${port_rom_version}/images/
+    cp -rf devices/haydn/* out/hyperos_${device_code}_${port_rom_version}/
 fi
 
 find out/${os_type}_${device_code}_${port_rom_version} |xargs touch
