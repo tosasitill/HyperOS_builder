@@ -906,6 +906,8 @@ if [[ "$is_ab_device" == false ]];then
 else
     mkdir -p out/hyperos_${device_code}_${port_rom_version}/images/
     mv -f build/portrom/images/super.zst out/hyperos_${device_code}_${port_rom_version}/images/
+    ls devices
+    ls devices/haydn/
     cp -rf devices/haydn/ out/hyperos_${device_code}_${port_rom_version}/
 fi
 
