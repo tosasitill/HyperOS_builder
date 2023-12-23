@@ -901,34 +901,6 @@ if [[ -d "devices/common" ]];then
     fi
 fi
 
-#Devices/机型代码/overaly 按照镜像的目录结构，可直接替换目标。
-if [[ -d "devices/${base_rom_code}/overlay" ]]; then
-    targetNFCFolder=$(find build/portrom/images/system/system build/portrom/images/product build/portrom/images/system_ext -type d -name "NQNfcNci*")
-    rm -rf $targetNFCFolder
-    cp -rfv devices/${base_rom_code}/overlay/* build/portrom/images/
-else
-    yellow "devices/${base_rom_code}/overlay 未找到" "devices/${base_rom_code}/overlay not found" 
-fi
-
-#添加erofs文件系统fstab
-if [ ${pack_type} == "EROFS" ];then
-    yellow "检查 vendor fstab.qcom是否需要添加erofs挂载点" "Validating whether adding erofs mount points is needed."
-    if ! grep -q "erofs" build/portrom/images/vendor/etc/fstab.qcom ; then
-               for pname in system odm vendor product mi_ext system_ext; do
-                     sed -i "/\/${pname}[[:space:]]\+ext4/{p;s/ext4/erofs/;}" build/portrom/images/vendor/etc/fstab.qcom
-                     added_line=$(sed -n "/\/${pname}[[:space:]]\+erofs/p" build/portrom/images/vendor/etc/fstab.qcom)
-    
-                    if [ -n "$added_line" ]; then
-                        yellow "添加$pname" "Adding mount point $pname"
-                    else
-                        error "添加失败，请检查" "Adding faild, please check."
-                        exit 1
-                        
-                    fi
-                done
-    fi
-fi
-
 # 去除avb校验
 blue "去除avb校验" "Disable avb verification."
 for fstab in $(find build/portrom/images/ -type f -name "fstab.*");do
