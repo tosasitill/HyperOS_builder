@@ -204,7 +204,7 @@ fi
 
 if [ ! -f "${portrom}" ] && [ "$(echo ${portrom} |grep http)" != "" ];then
     blue "移植包为一个链接，正在尝试下载"  "Download link detected, start downloding.."
-    aria2c --max-download-limit=1024M --file-allocation=none -x16 ${portrom}
+    aria2c -s 10 -x 10 --file-allocation=none ${portrom}
     portrom=$(basename ${portrom} | sed 's/\?t.*//')
     if [ ! -f "${portrom}" ];then
         error "下载错误" "Download error!"
