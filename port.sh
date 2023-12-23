@@ -940,24 +940,6 @@ for fstab in $(find build/portrom/images/ -type f -name "fstab.*");do
     sed -i "s/,avb//g" $fstab
 done
 
-# data 加密
-remove_data_encrypt=$(grep "remove_data_encryption" bin/port_config |cut -d '=' -f 2)
-if [ ${remove_data_encrypt} = "true" ];then
-    blue "去除data加密"
-    for fstab in $(find build/portrom/images -type f -name "fstab.*");do
-		blue "Target: $fstab"
-		sed -i "s/,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized+wrappedkey_v0//g" $fstab
-		sed -i "s/,fileencryption=aes-256-xts:aes-256-cts:v2+emmc_optimized+wrappedkey_v0//g" $fstab
-		sed -i "s/,fileencryption=aes-256-xts:aes-256-cts:v2//g" $fstab
-		sed -i "s/,metadata_encryption=aes-256-xts:wrappedkey_v0//g" $fstab
-		sed -i "s/,fileencryption=aes-256-xts:wrappedkey_v0//g" $fstab
-		sed -i "s/,metadata_encryption=aes-256-xts//g" $fstab
-		sed -i "s/,fileencryption=aes-256-xts//g" $fstab
-        sed -i "s/,fileencryption=ice//g" $fstab
-		sed -i "s/fileencryption/encryptable/g" $fstab
-	done
-fi
-
 for pname in ${port_partition};do
     rm -rf build/portrom/images/${pname}.img
 done
