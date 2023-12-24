@@ -12,7 +12,7 @@
 
 
 build_user="Bruce Teng, tosasitill"
-build_host="tosasitill's Macbook Pro 16' M3 Max"
+build_host="tosasitill's 编译服务器 簇N.1_S.2"
 
 # 底包和移植包为外部参数传入
 baserom="$1"
