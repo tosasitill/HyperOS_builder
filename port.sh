@@ -2,14 +2,13 @@
 
 # hyperOS_port project
 
-# For A-only and V/A-B (not tested) Devices
+# For V-AB Devices
 
-# Based on Android 13
+# Based on Android 14 HyperOS
 
-# Test Base ROM: A-only Mi 10/PRO/Ultra (MIUI 14 Latset stockrom)
+# tosasitill made with love 0202 & 0227
 
-# Test Port ROM: Mi 14/Pro OS1.0.9-1.0.25 Mi 13/PRO OS1.0 23.11.09-23.11.10 DEV
-
+# 2023.12.26
 
 build_user="Bruce Teng, tosasitill"
 build_host="tosasitill's 编译服务器 簇N.1_S.2"
