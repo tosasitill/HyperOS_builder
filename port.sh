@@ -182,7 +182,6 @@ brightness_fix_method=$(grep "brightness_fix_method" bin/port_config |cut -d '='
 
 compatible_matrix_matches_enabled=$(grep "compatible_matrix_matches_check" bin/port_config | cut -d '=' -f 2)
 
-start_time=$SECONDS
 
 green "开始自动移植操作"
 
