@@ -189,7 +189,7 @@ green "开始自动移植操作"
 # 检查为本地包还是链接
 if [ ! -f "${baserom}" ] && [ "$(echo $baserom |grep http)" != "" ];then
     blue "底包为一个链接，正在尝试下载" "Download link detected, start downloding.."
-    aria2c --max-download-limit=1024M --file-allocation=none -s10 -x10 -j10 ${baserom}
+    aria2c --max-download-limit=1024M --file-allocation=none -s10 -x10 -j10 "${baserom}"
     baserom=$(basename ${baserom} | sed 's/\?t.*//')
     if [ ! -f "${baserom}" ];then
         error "下载错误" "Download error!"
