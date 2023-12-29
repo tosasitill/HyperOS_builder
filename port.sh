@@ -21,8 +21,6 @@ work_dir=$(pwd)
 tools_dir=${work_dir}/bin/$(uname)/$(uname -m)
 export PATH=$(pwd)/bin/$(uname)/$(uname -m)/:$PATH
 
-# 定义颜色输出函数
-# Define color output function
 error() {
     if [ "$#" -eq 2 ]; then
         
@@ -85,8 +83,8 @@ green() {
 shopt -s expand_aliases
 if [[ "$OSTYPE" == "darwin"* ]]; then
     yellow "检测到Mac，设置alias" "macOS detected,setting alias"
-    alias tr=gtr
     alias sed=gsed
+    alias tr=gtr
     alias grep=ggrep
     alias du=gdu
     alias date=gdate
@@ -143,12 +141,16 @@ patch_smali() {
             yellow "I: 开始patch目标 ${smalidir}" "Target ${smalidir} Found"
             search_pattern=$3
             repalcement_pattern=$4
-            sed -i "s/$search_pattern/$repalcement_pattern/g" $targetsmali
+            if [[ $5 == 'regex' ]];then
+                 sed -i "/${search_pattern}/c\\${repalcement_pattern}" $targetsmali
+            else
+                sed -i "s/$search_pattern/$repalcement_pattern/g" $targetsmali
+            fi
             java -jar bin/apktool/smali.jar a --api ${port_android_sdk} tmp/$foldername/${smalidir} -o tmp/$foldername/${smalidir}.dex > /dev/null 2>&1 || error " Smaling 失败" "Smaling failed"
             pushd tmp/$foldername/ >/dev/null || exit
             7z a -y -mx0 -tzip $targetfilename ${smalidir}.dex  > /dev/null 2>&1 || error "修改$targetfilename失败" "Failed to modify $targetfilename"
             popd >/dev/null || exit
-            yellow "修补$targetfilename 完成"
+            yellow "修补$targetfilename 完成" "Fix $targetfilename completed"
             if [[ $targetfilename == *.apk ]]; then
                 yellow "检测到apk，进行zipalign处理。。" "APK file detected, initiating ZipAlign process..."
                 rm -rf ${targetfilefullpath}
@@ -182,13 +184,10 @@ brightness_fix_method=$(grep "brightness_fix_method" bin/port_config |cut -d '='
 
 compatible_matrix_matches_enabled=$(grep "compatible_matrix_matches_check" bin/port_config | cut -d '=' -f 2)
 
-
-green "开始自动移植操作"
-
 # 检查为本地包还是链接
 if [ ! -f "${baserom}" ] && [ "$(echo $baserom |grep http)" != "" ];then
     blue "底包为一个链接，正在尝试下载" "Download link detected, start downloding.."
-    aria2c --max-download-limit=1024M --file-allocation=none -s10 -x10 -j10 "${baserom}"
+    aria2c --max-download-limit=1024M --file-allocation=none -s10 -x10 -j10 ${baserom}
     baserom=$(basename ${baserom} | sed 's/\?t.*//')
     if [ ! -f "${baserom}" ];then
         error "下载错误" "Download error!"
@@ -202,7 +201,7 @@ fi
 
 if [ ! -f "${portrom}" ] && [ "$(echo ${portrom} |grep http)" != "" ];then
     blue "移植包为一个链接，正在尝试下载"  "Download link detected, start downloding.."
-    aria2c --check-certificate=false --max-download-limit=1024M --file-allocation=none -s10 -x10 -j10 ${portrom}
+    aria2c --max-download-limit=1024M --file-allocation=none -s10 -x10 -j10 ${portrom}
     portrom=$(basename ${portrom} | sed 's/\?t.*//')
     if [ ! -f "${portrom}" ];then
         error "下载错误" "Download error!"
@@ -216,6 +215,8 @@ fi
 
 if [ "$(echo $baserom |grep miui_)" != "" ];then
     device_code=$(basename $baserom |cut -d '_' -f 2)
+elif [ "$(echo $baserom |grep xiaomi.eu_)" != "" ];then
+    device_code=$(basename $baserom |cut -d '_' -f 3)
 else
     device_code="YourDevice"
 fi
@@ -227,14 +228,22 @@ if unzip -l ${baserom} | grep -q "payload.bin"; then
 elif unzip -l ${baserom} | grep -q "br$";then
     baserom_type="br"
     super_list="vendor mi_ext odm system product system_ext"
-    
+elif unzip -l ${baserom} | grep -q "images/super.img*"; then
+    is_base_rom_eu=true
+    super_list="vendor mi_ext odm system product system_ext"
 else
     error "底包中未发现payload.bin以及br文件，请使用MIUI官方包后重试" "payload.bin/new.br not found, please use HyperOS official OTA zip package."
     exit
 fi
 
 blue "开始检测ROM移植包" "Validating PORTROM.."
-unzip -l ${portrom} |grep "payload.bin" 1>/dev/null 2>&1 || error "目标移植包没有payload.bin，请用MIUI官方包作为移植包" "payload.bin not found, please use HyperOS official OTA zip package."
+if unzip -l ${portrom} | grep  -q "payload.bin"; then
+    green "ROM初步检测通过" "ROM validation passed."
+elif [[ ${portrom} == *"xiaomi.eu"* ]];then
+    is_eu_rom=true
+else
+    error "目标移植包没有payload.bin，请用MIUI官方包作为移植包" "payload.bin not found, please use HyperOS official OTA zip package."
+fi
 
 green "ROM初步检测通过" "ROM validation passed."
 
@@ -262,30 +271,58 @@ mkdir -p build/portrom/images/
 mkdir -p build/portrom/config/
 
 # 提取分区
-if [ ${baserom_type} = 'payload' ];then
+if [[ ${baserom_type} == 'payload' ]];then
     blue "正在提取底包 [payload.bin]" "Extracting files from BASEROM [payload.bin]"
     unzip ${baserom} payload.bin -d build/baserom > /dev/null 2>&1 ||error "解压底包 [payload.bin] 时出错" "Extracting [payload.bin] error"
     green "底包 [payload.bin] 提取完毕" "[payload.bin] extracted."
-else
+elif [[ ${baserom_type} == 'br' ]];then
     blue "正在提取底包 [new.dat.br]" "Extracting files from BASEROM [*.new.dat.br]"
     unzip ${baserom} -d build/baserom  > /dev/null 2>&1 || error "解压底包 [new.dat.br]时出错" "Extracting [new.dat.br] error"
     green "底包 [new.dat.br] 提取完毕" "[new.dat.br] extracted."
+elif [[ ${is_base_rom_eu} == true ]];then
+    blue "正在提取底包 [super.img]" "Extracting files from BASETROM [super.img]"
+    unzip ${baserom} 'images/*' -d build/baserom >  /dev/null 2>&1 ||error "解压移植包 [super.img] 时出错"  "Extracting [super.img] error"
+    blue "合并super.img* 到super.img" "Merging super.img.* into super.img"
+    simg2img build/baserom/images/super.img.* build/baserom/images/super.img
+    rm -rf build/baserom/images/super.img.*
+    mv build/baserom/images/super.img build/baserom/super.img
+    green "底包 [super.img] 提取完毕" "[super.img] extracted."
+    mv build/baserom/images/boot.img build/baserom/
+    mkdir -p build/baserom/firmware-update
+    mv build/baserom/images/* build/baserom/firmware-update
 fi
 
-blue "正在提取移植包 [payload.bin]" "Extracting files from PROTROM [payload.bin]"
-unzip ${portrom} payload.bin -d build/portrom  > /dev/null 2>&1 ||error "解压移植包 [payload.bin] 时出错"  "Extracting [payload.bin] error"
-green "移植包 [payload.bin] 提取完毕" "[payload.bin] extracted."
-
-if [ ${baserom_type} = 'payload' ];then
-
-    blue "开始分解底包 [payload.bin]" "Unpacking [payload.bin]"
-    payload-dumper-go -o build/baserom/images/ build/baserom/payload.bin >/dev/null 2>&1 ||error "分解底包 [payload.bin] 时出错" "Unpacking [payload.bin] failed"
+if [[ ${is_eu_rom} == true ]];then
+    blue "正在提取移植包 [super.img]" "Extracting files from PORTROM [super.img]"
+    unzip ${portrom} 'images/super.img.*' -d build/portrom >  /dev/null 2>&1 ||error "解压移植包 [super.img] 时出错"  "Extracting [super.img] error"
+    blue "合并super.img* 到super.img" "Merging super.img.* into super.img"
+    simg2img build/portrom/images/super.img.* build/portrom/images/super.img
+    rm -rf build/portrom/images/super.img.*
+    mv build/portrom/images/super.img build/portrom/super.img
+    green "移植包 [super.img] 提取完毕" "[super.img] extracted."
 else
-    blue "开始分解底包 [new.dat.br]" "Unpacking [new.dat.br]"
+    blue "正在提取移植包 [payload.bin]" "Extracting files from PORTROM [payload.bin]"
+    unzip ${portrom} payload.bin -d build/portrom  > /dev/null 2>&1 ||error "解压移植包 [payload.bin] 时出错"  "Extracting [payload.bin] error"
+    green "移植包 [payload.bin] 提取完毕" "[payload.bin] extracted."
+fi
+
+if [[ ${baserom_type} == 'payload' ]];then
+
+    blue "开始分解底包 [payload.bin]" "Unpacking BASEROM [payload.bin]"
+    payload-dumper-go -o build/baserom/images/ build/baserom/payload.bin >/dev/null 2>&1 ||error "分解底包 [payload.bin] 时出错" "Unpacking [payload.bin] failed"
+
+elif [[ ${is_base_rom_eu} == true ]];then
+     blue "开始分解底包 [super.img]" "Unpacking BASEROM [super.img]"
+        for i in ${super_list}; do 
+            python3 bin/lpunpack.py -p ${i} build/baserom/super.img build/baserom/images
+        done
+
+elif [[ ${baserom_type} == 'br' ]];then
+    blue "开始分解底包 [new.dat.br]" "Unpacking BASEROM[new.dat.br]"
         for i in ${super_list}; do 
             ${tools_dir}/brotli -d build/baserom/$i.new.dat.br >/dev/null 2>&1
             sudo python3 ${tools_dir}/sdat2img.py build/baserom/$i.transfer.list build/baserom/$i.new.dat build/baserom/images/$i.img >/dev/null 2>&1
-            rm -rf $i.new.data.* $i.transfer.list $i.patch.*
+            rm -rf build/baserom/$i.new.dat* build/baserom/$i.transfer.list build/baserom/$i.patch.*
         done
 fi
 
@@ -293,18 +330,18 @@ for part in system system_dlkm system_ext product product_dlkm mi_ext ;do
     if [[ -f build/baserom/images/${part}.img ]];then 
         if [[ $($tools_dir/gettype -i build/baserom/images/${part}.img) == "ext" ]];then
             pack_type=EXT
-            blue "正在分解底包 ${part}.img [ext]" "Extracing ${part}.img [ext]"
+            blue "正在分解底包 ${part}.img [ext]" "Extracing ${part}.img [ext] from BASEROM"
             sudo python3 bin/imgextractor/imgextractor.py build/baserom/images/${part}.img >/dev/null 2>&1
-            blue "分解底包 [${part}.img] 完成" "${part}.img [ext] extracted."
+            blue "分解底包 [${part}.img] 完成" "BASEROM ${part}.img [ext] extracted."
             mv ${part} build/baserom/images/
-            
+            rm -rf build/baserom/images/${part}.img      
         elif [[ $($tools_dir/gettype -i build/baserom/images/${part}.img) == "erofs" ]]; then
             pack_type=EROFS
-            blue "正在分解底包 ${part}.img [erofs]" "Extracing ${part}.img [erofs]"
+            blue "正在分解底包 ${part}.img [erofs]" "Extracing ${part}.img [erofs] from BASEROM"
             extract.erofs -x -i build/baserom/images/${part}.img  > /dev/null 2>&1 || error "分解 ${part}.img 失败" "Extracting ${part}.img failed."
-            blue "分解底包 [${part}.img][erofs] 完成" "${part}.img [erofs] extracted."
+            blue "分解底包 [${part}.img][erofs] 完成" "BASEROM ${part}.img [erofs] extracted."
             mv ${part} build/baserom/images/
-            
+            rm -rf build/baserom/images/${part}.img
         fi
         mv config/*${part}* build/baserom/config/
     fi
@@ -319,13 +356,20 @@ done
 
 # 分解镜像
 green "开始提取逻辑分区镜像" "Starting extract partition from img"
-
+echo $super_list
 for part in ${super_list};do
     if [[ $part =~ ^(vendor|odm|vendor_dlkm|odm_dlkm)$ ]] && [[ -f "build/portrom/images/$part.img" ]]; then
         blue "从底包中提取 [${part}]分区 ..." "Extracting [${part}] from BASEROM"
     else
-        blue "payload.bin 提取 [${part}] 分区..." "Extracting [${part}] from payload.bin"
-        payload-dumper-go -p ${part} -o build/portrom/images/ build/portrom/payload.bin >/dev/null 2>&1 ||error "提取移植包 [${part}] 分区时出错" "Extracting partition [${part}] error."
+        if [[ ${is_eu_rom} == true ]];then
+            blue "PORTROM super.img 提取 [${part}] 分区..." "Extracting [${part}] from PORTROM super.img"
+            blue "lpunpack.py PORTROM super.img ${patrt}_a"
+            python3 bin/lpunpack.py -p ${part}_a build/portrom/super.img build/portrom/images 
+            mv build/portrom/images/${part}_a.img build/portrom/images/${part}.img
+        else
+            blue "payload.bin 提取 [${part}] 分区..." "Extracting [${part}] from PORTROM payload.bin"
+            payload-dumper-go -p ${part} -o build/portrom/images/ build/portrom/payload.bin >/dev/null 2>&1 ||error "提取移植包 [${part}] 分区时出错" "Extracting partition [${part}] error."
+        fi
     fi
     if [ -f "${work_dir}/build/portrom/images/${part}.img" ];then
         blue "开始提取 ${part}.img" "Extracting ${part}.img"
@@ -336,9 +380,7 @@ for part in ${super_list};do
             mv ${part} build/portrom/images/
             mkdir -p build/portrom/images/${part}/lost+found
             mv config/*${part}* build/portrom/config/
-            
-            rm -rf build/portrom/images/${part}.img
-
+            #rm -rf build/portrom/images/${part}.img
             green "提取 [${part}] [ext]镜像完毕" "Extracting [${part}].img [ext] done"
         elif [[ $(gettype -i build/portrom/images/${part}.img) == "erofs" ]];then
             pack_type=EROFS
@@ -348,8 +390,7 @@ for part in ${super_list};do
             mv ${part} build/portrom/images/
             mkdir -p build/portrom/images/${part}/lost+found
             mv config/*${part}* build/portrom/config/
-            rm -rf build/portrom/images/${part}.img
-
+            #rm -rf build/portrom/images/${part}.img
             green "提取移植包[${part}] [erofs]镜像完毕" "Extracting ${part} [erofs] done."
         fi
         
@@ -499,31 +540,6 @@ green "NFC修复成功"
 blue "复制设备特性XML文件"   
 cp -rf  build/baserom/images/product/etc/device_features/* build/portrom/images/product/etc/device_features/
 
-# A13-14 启动校验破解
-blue "触控优化" "Touch optimization"
-echo "ro.surface_flinger.use_content_detection_for_refresh_rate=true" >> build/portrom/images/vendor/default.prop
-echo "ro.surface_flinger.set_idle_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-echo "ro.surface_flinger.set_touch_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-echo "ro.surface_flinger.set_display_power_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-mkdir -p tmp/
-blue "开始移除 Android 签名校验" "Disalbe Android 14 Apk Signature Verfier"
-cp -rf build/portrom/images/system/system/framework/services.jar tmp/services.apk
-pushd tmp/
-apktool d -q services.apk
-target_method='getMinimumSignatureSchemeVersionForTargetSdk'
-find services/smali_classes2/com/android/server/pm/ services/smali_classes2/com/android/server/pm/pkg/parsing/ -type f -maxdepth 1 -name "*.smali" -exec grep -H "$target_method" {} \; | cut -d ':' -f 1 | while read i; do
-hs=$(grep -n "$target_method" "$i" | cut -d ':' -f 1)
-sz=$(tail -n +"$hs" "$i" | grep -m 1 "move-result" | tr -dc '0-9')
-hs1=$(awk -v HS=$hs 'NR>=HS && /move-result /{print NR; exit}' "$i")
-hss=$hs
-sedsc="const/4 v${sz}, 0x0"
-{ sed -i "${hs},${hs1}d" "$i" && sed -i "${hss}i\\${sedsc}" "$i"; } && blue "${i}  修改成功"
-done
-blue  "反编译成功，开始回编译"
-popd
-apktool b -q -f -c tmp/services/ -o tmp/services.jar
-
-cp -rfv tmp/services.jar build/portrom/images/system/system/framework/services.jar
 # 屏幕密度修修改
 for prop in $(find build/baserom/images/product build/baserom/images/system -type f -name "build.prop");do
     base_rom_density=$(< "$prop" grep "ro.sf.lcd_density" |awk 'NR==1' |cut -d '=' -f 2)
@@ -612,55 +628,112 @@ if [[ $(echo "$portrom") == *"DEV"* ]];then
 fi
 
 
+if [[ ${is_eu_rom} == "true" ]];then
+    patch_smali "miui-services.jar" "SystemServerImpl.smali" ".method public constructor <init>()V/,/.end method" ".method public constructor <init>()V\n\t.registers 1\n\tinvoke-direct {p0}, Lcom\/android\/server\/SystemServerStub;-><init>()V\n\n\treturn-void\n.end method" "regex"
+
+else    
+    if [[ "$compatible_matrix_matches_enabled" == "false" ]]; then
+        patch_smali "framework.jar" "Build.smali" ".method public static isBuildConsistent()Z" ".method public static isBuildConsistent()Z \n\n\t.registers 1 \n\n\tconst\/4 v0,0x1\n\n\treturn v0\n.end method\n\n.method public static isBuildConsistent_bak()Z"
+    fi
+
+    blue "触控优化" "Touch optimization"
+    echo "ro.surface_flinger.use_content_detection_for_refresh_rate=true" >> build/portrom/images/vendor/default.prop
+    echo "ro.surface_flinger.set_idle_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
+    echo "ro.surface_flinger.set_touch_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
+    echo "ro.surface_flinger.set_display_power_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
+
+    APKTOOL="java -jar $work_dir/bin/apktool/apktool.jar"
+    mkdir -p tmp/
+    blue "开始移除 Android 签名校验" "Disalbe Android 14 Apk Signature Verfier"
+    cp -rf build/portrom/images/system/system/framework/services.jar tmp/services.apk
+    pushd tmp/
+    $APKTOOL d -q services.apk
+    target_method='getMinimumSignatureSchemeVersionForTargetSdk'
+    find services/smali_classes2/com/android/server/pm/ services/smali_classes2/com/android/server/pm/pkg/parsing/ -type f -maxdepth 1 -name "*.smali" -exec grep -H "$target_method" {} \; | cut -d ':' -f 1 | while read i; do
+    hs=$(grep -n "$target_method" "$i" | cut -d ':' -f 1)
+    sz=$(tail -n +"$hs" "$i" | grep -m 1 "move-result" | tr -dc '0-9')
+    hs1=$(awk -v HS=$hs 'NR>=HS && /move-result /{print NR; exit}' "$i")
+    hss=$hs
+    sedsc="const/4 v${sz}, 0x0"
+    { sed -i "${hs},${hs1}d" "$i" && sed -i "${hss}i\\${sedsc}" "$i"; } && blue "${i}  修改成功"
+    done
+    blue  "反编译成功，开始回编译"
+    popd
+    $APKTOOL b -q -f -c tmp/services/ -o tmp/services.jar
+
+    cp -rfv tmp/services.jar build/portrom/images/system/system/framework/services.jar
+    
+fi
+
 # 主题防恢复
 if [ -f build/portrom/images/system/system/etc/init/hw/init.rc ];then
 	sed -i '/on boot/a\'$'\n''    chmod 0731 \/data\/system\/theme' build/portrom/images/system/system/etc/init/hw/init.rc
+fi
 
-yellow "删除多余的App" "Debloating..." 
-# List of apps to be removed
-debloat_apps=("MSA" "mab" "Updater" "MiuiUpdater" "MiService" "MIService" "SoterService" "Hybrid" "AnalyticsCore")
 
-# Find all app directories once and store in an array
-app_dirs=($(find build/portrom/images/product -type d -name "*${debloat_apps[@]}*"))
-
-# Iterate through app directories and remove them
-for app_dir in "${app_dirs[@]}"; do
-    if [[ -d "$app_dir" ]]; then
-        yellow "删除目录: $app_dir" "Removing directory: $app_dir"
-        rm -rf "$app_dir"
+if [[ ${is_eu_rom} == true ]];then
+    rm -rf build/portrom/images/product/app/Updater
+    baseXGoogle=$(find build/baserom/images/product/ -type d -name "HotwordEnrollmentXGoogleHEXAGON*")
+    portXGoogle=$(find build/portrom/images/product/ -type d -name "HotwordEnrollmentXGoogleHEXAGON*")
+    if [ -d "${baseXGoogle}" ] && [ -d "${portXGoogle}" ];then
+        yellow "查找并替换HotwordEnrollmentXGoogleHEXAGON_WIDEBAND.apk" "Searching and Replacing HotwordEnrollmentXGoogleHEXAGON_WIDEBAND.apk.."
+        rm -rf ./${portXGoogle}/*
+       cp -rf ./${baseXGoogle}/* ${portXGoogle}/
+    else
+        if [ -d "${baseXGoogle}" ] && [ ! -d "${portXGoogle}" ];then
+            blue "未找到HotwordEnrollmentXGoogleHEXAGON_WIDEBAND.apk，替换为原包" "HotwordEnrollmentXGoogleHEXAGON_WIDEBAND.apk is missing, copying from base..."
+            cp -rf ${baseXGoogle} build/portrom/images/product/priv-app/
+        fi
     fi
-done
 
-# Remove additional directories and files in one command
-rm -rf build/portrom/images/product/etc/auto-install* \
-       build/portrom/images/product/data-app/*GalleryLockscreen* \
-       build/portrom/images/system/verity_key \
-       build/portrom/images/vendor/verity_key \
-       build/portrom/images/product/verity_key \
-       build/portrom/images/system/recovery-from-boot.p \
-       build/portrom/images/vendor/recovery-from-boot.p \
-       build/portrom/images/product/recovery-from-boot.p \
-       build/portrom/images/product/media/theme/miui_mod_icons/com.google.android.apps.nbu* \
-       build/portrom/images/product/media/theme/miui_mod_icons/dynamic/com.google.android.apps.nbu* >/dev/null 2>&1
+    #baseOKGoogle=$(find build/baserom/images/product/ -type d -name "HotwordEnrollmentOKGoogleHEXAGON*")
+    #portOKGoogle=$(find build/portrom/images/product/ -type d -name "HotwordEnrollmentOKGoogleHEXAGON*")
+    #if [ -d "${baseOKGoogle}" ] && [ -d "${portOKGoogle}" ];then
+    #    yellow "查找并替换HotwordEnrollmentOKGoogleHEXAGON_WIDEBAND.apk" "Searching and Replacing HotwordEnrollmentOKGoogleHEXAGON_WIDEBAND.apk.."
+    #    rm -rf ./${portOKGoogle}/*
+    #    cp -rf ./${baseOKGoogle}/* ${portOKGoogle}/
+    #else
+    #    if [ -d "${baseOKGoogle}" ] && [ ! -d "${portOKGoogle}" ];then
+    #        blue "未找到HotwordEnrollmentOKGoogleHEXAGON_WIDEBAND.apk，替换为原包" "HotwordEnrollmentOKGoogleHEXAGON_WIDEBAND.apk is missing, copying from base..."
+    #        cp -rf ${baseOKGoogle} build/portrom/images/product/priv-app/
+    #    fi
+    #fi
 
-# Create tmp/app directory
-mkdir -p tmp/app
+else
+    yellow "删除多余的App" "Debloating..." 
+    # List of apps to be removed
+    debloat_apps=("MSA" "mab" "Updater" "MiuiUpdater" "MiService" "MIService" "SoterService" "Hybrid" "AnalyticsCore")
 
-# List of apps to keep
-kept_data_apps=("Weather" "DeskClock" "Gallery" "SoundRecorder" "ScreenRecorder" "Calculator" "CleanMaster" "Calendar" "Compass" "Notes" "MediaEditor" "Scanner" "XiaoAISpeechEngine" "wps-lite")
+    for debloat_app in "${debloat_apps[@]}"; do
+        # Find the app directory
+        app_dir=$(find build/portrom/images/product -type d -name "*$debloat_app*")
+        
+        # Check if the directory exists before removing
+        if [[ -d "$app_dir" ]]; then
+            yellow "删除目录: $app_dir" "Removing directory: $app_dir"
+            rm -rf "$app_dir"
+        fi
+    done
+    rm -rf build/portrom/images/product/etc/auto-install*
+    rm -rf build/portrom/images/product/data-app/*GalleryLockscreen* >/dev/null 2>&1
+    mkdir -p tmp/app
+    kept_data_apps=("Weather" "DeskClock" "Gallery" "SoundRecorder" "ScreenRecorder" "Calculator" "CleanMaster" "Calendar" "Compass" "Notes" "MediaEditor" "Scanner" "XiaoAISpeechEngine" "wps-lite")
+    for app in "${kept_data_apps[@]}"; do
+        mv build/portrom/images/product/data-app/*"${app}"* tmp/app/ >/dev/null 2>&1
+        done
 
-# Move kept apps to tmp/app directory
-for app in "${kept_data_apps[@]}"; do
-    mv build/portrom/images/product/data-app/*"${app}"* tmp/app/ >/dev/null 2>&1
-done
-
-# Clear and repopulate the data-app directory
-rm -rf build/portrom/images/product/data-app/*
-cp -rf tmp/app/* build/portrom/images/product/data-app
-
-# Remove temporary directory
-rm -rf tmp/app
-
+    rm -rf build/portrom/images/product/data-app/*
+    cp -rf tmp/app/* build/portrom/images/product/data-app
+    rm -rf tmp/app
+    rm -rf build/portrom/images/system/verity_key
+    rm -rf build/portrom/images/vendor/verity_key
+    rm -rf build/portrom/images/product/verity_key
+    rm -rf build/portrom/images/system/recovery-from-boot.p
+    rm -rf build/portrom/images/vendor/recovery-from-boot.p
+    rm -rf build/portrom/images/product/recovery-from-boot.p
+    rm -rf build/portrom/images/product/media/theme/miui_mod_icons/com.google.android.apps.nbu*
+    rm -rf build/portrom/images/product/media/theme/miui_mod_icons/dynamic/com.google.android.apps.nbu*
+fi
 # build.prop 修改
 blue "正在修改 build.prop" "Modifying build.prop"
 # change the locale to English
