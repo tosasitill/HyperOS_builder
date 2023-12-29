@@ -326,7 +326,7 @@ elif [[ ${baserom_type} == 'br' ]];then
         done
 fi
 
-for part in system system_dlkm system_ext product product_dlkm mi_ext ;do
+for part in system system_ext product mi_ext ;do
     if [[ -f build/baserom/images/${part}.img ]];then 
         if [[ $($tools_dir/gettype -i build/baserom/images/${part}.img) == "ext" ]];then
             pack_type=EXT
@@ -348,7 +348,7 @@ for part in system system_dlkm system_ext product product_dlkm mi_ext ;do
     
 done
 
-for image in vendor odm vendor_dlkm odm_dlkm;do
+for image in vendor odm;do
     if [ -f build/baserom/images/${image}.img ];then
         cp -rf build/baserom/images/${image}.img build/portrom/images/${image}.img
     fi
@@ -358,7 +358,7 @@ done
 green "开始提取逻辑分区镜像" "Starting extract partition from img"
 echo $super_list
 for part in ${super_list};do
-    if [[ $part =~ ^(vendor|odm|vendor_dlkm|odm_dlkm)$ ]] && [[ -f "build/portrom/images/$part.img" ]]; then
+    if [[ $part =~ ^(vendor|odm)$ ]] && [[ -f "build/portrom/images/$part.img" ]]; then
         blue "从底包中提取 [${part}]分区 ..." "Extracting [${part}] from BASEROM"
     else
         if [[ ${is_eu_rom} == true ]];then
