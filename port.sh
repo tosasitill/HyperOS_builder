@@ -505,12 +505,11 @@ echo "ro.surface_flinger.use_content_detection_for_refresh_rate=true" >> build/p
 echo "ro.surface_flinger.set_idle_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
 echo "ro.surface_flinger.set_touch_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
 echo "ro.surface_flinger.set_display_power_timer_ms=2147483647" >> build/portrom/images/vendor/default.prop
-APKTOOL="java -jar bin/apktool/apktool.jar"
 mkdir -p tmp/
 blue "开始移除 Android 签名校验" "Disalbe Android 14 Apk Signature Verfier"
 cp -rf build/portrom/images/system/system/framework/services.jar tmp/services.apk
 pushd tmp/
-$APKTOOL d -q services.apk
+apktool d -q services.apk
 target_method='getMinimumSignatureSchemeVersionForTargetSdk'
 find services/smali_classes2/com/android/server/pm/ services/smali_classes2/com/android/server/pm/pkg/parsing/ -type f -maxdepth 1 -name "*.smali" -exec grep -H "$target_method" {} \; | cut -d ':' -f 1 | while read i; do
 hs=$(grep -n "$target_method" "$i" | cut -d ':' -f 1)
@@ -522,7 +521,7 @@ sedsc="const/4 v${sz}, 0x0"
 done
 blue  "反编译成功，开始回编译"
 popd
-$APKTOOL b -q -f -c tmp/services/ -o tmp/services.jar
+apktool b -q -f -c tmp/services/ -o tmp/services.jar
 
 cp -rfv tmp/services.jar build/portrom/images/system/system/framework/services.jar
 # 屏幕密度修修改
