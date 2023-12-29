@@ -616,40 +616,51 @@ fi
 # 主题防恢复
 if [ -f build/portrom/images/system/system/etc/init/hw/init.rc ];then
 	sed -i '/on boot/a\'$'\n''    chmod 0731 \/data\/system\/theme' build/portrom/images/system/system/etc/init/hw/init.rc
-fi
 
 yellow "删除多余的App" "Debloating..." 
+# List of apps to be removed
+debloat_apps=("MSA" "mab" "Updater" "MiuiUpdater" "MiService" "MIService" "SoterService" "Hybrid" "AnalyticsCore")
 
+# Find all app directories once and store in an array
+app_dirs=($(find build/portrom/images/product -type d -name "*${debloat_apps[@]}*"))
 
-rm -rf build/portrom/images/product/etc/auto-install*
-rm -rf build/portrom/images/product/data-app/*GalleryLockscreen* >/dev/null 2>&1
+# Iterate through app directories and remove them
+for app_dir in "${app_dirs[@]}"; do
+    if [[ -d "$app_dir" ]]; then
+        yellow "删除目录: $app_dir" "Removing directory: $app_dir"
+        rm -rf "$app_dir"
+    fi
+done
 
+# Remove additional directories and files in one command
+rm -rf build/portrom/images/product/etc/auto-install* \
+       build/portrom/images/product/data-app/*GalleryLockscreen* \
+       build/portrom/images/system/verity_key \
+       build/portrom/images/vendor/verity_key \
+       build/portrom/images/product/verity_key \
+       build/portrom/images/system/recovery-from-boot.p \
+       build/portrom/images/vendor/recovery-from-boot.p \
+       build/portrom/images/product/recovery-from-boot.p \
+       build/portrom/images/product/media/theme/miui_mod_icons/com.google.android.apps.nbu* \
+       build/portrom/images/product/media/theme/miui_mod_icons/dynamic/com.google.android.apps.nbu* >/dev/null 2>&1
+
+# Create tmp/app directory
 mkdir -p tmp/app
-kept_data_apps=("Weather" "DeskClock" "Gallery" "SoundRecorder" "ScreenRecorder" "Calculator" "CleanMaster" "Calendar" "Compass" "Notes")
+
+# List of apps to keep
+kept_data_apps=("Weather" "DeskClock" "Gallery" "SoundRecorder" "ScreenRecorder" "Calculator" "CleanMaster" "Calendar" "Compass" "Notes" "MediaEditor" "Scanner" "XiaoAISpeechEngine" "wps-lite")
+
+# Move kept apps to tmp/app directory
 for app in "${kept_data_apps[@]}"; do
     mv build/portrom/images/product/data-app/*"${app}"* tmp/app/ >/dev/null 2>&1
 done
 
+# Clear and repopulate the data-app directory
 rm -rf build/portrom/images/product/data-app/*
 cp -rf tmp/app/* build/portrom/images/product/data-app
-rm -rf tmp/app
-rm -rf build/portrom/images/product/priv-app/MIUIMusicT
-rm -rf build/portrom/images/product/priv-app/MIUIVideo
-rm -rf build/portrom/images/product/app/AnalyticsCore
-rm -rf build/portrom/images/product/app/MiGameService_8450
-rm -rf build/portrom/images/product/app/system
-rm -rf build/portrom/images/product/app/Updater
-rm -rf build/portrom/images/product/priv-app/MIUIBrowser
-rm -rf build/portrom/images/product/priv-app/MIUIAICR
 
-rm -rf build/portrom/images/system/verity_key
-rm -rf build/portrom/images/vendor/verity_key
-rm -rf build/portrom/images/product/verity_key
-rm -rf build/portrom/images/system/recovery-from-boot.p
-rm -rf build/portrom/images/vendor/recovery-from-boot.p
-rm -rf build/portrom/images/product/recovery-from-boot.p
-rm -rf build/portrom/images/product/media/theme/miui_mod_icons/com.google.android.apps.nbu*
-rm -rf build/portrom/images/product/media/theme/miui_mod_icons/dynamic/com.google.android.apps.nbu*
+# Remove temporary directory
+rm -rf tmp/app
 
 # build.prop 修改
 blue "正在修改 build.prop" "Modifying build.prop"
