@@ -702,7 +702,7 @@ if [[ ${is_eu_rom} == true ]];then
 else
     yellow "删除多余的App" "Debloating..." 
     # List of apps to be removed
-    debloat_apps=("MSA" "mab" "Updater" "MiuiUpdater" "MiService" "MIService" "SoterService" "Hybrid" "AnalyticsCore")
+    debloat_apps=("MSA" "mab" "Updater" "MiuiUpdater" "system" "MiService" "MIService" "SoterService" "Hybrid" "AnalyticsCore")
 
     for debloat_app in "${debloat_apps[@]}"; do
         # Find the app directory
@@ -717,7 +717,7 @@ else
     rm -rf build/portrom/images/product/etc/auto-install*
     rm -rf build/portrom/images/product/data-app/*GalleryLockscreen* >/dev/null 2>&1
     mkdir -p tmp/app
-    kept_data_apps=("Weather" "DeskClock" "Gallery" "SoundRecorder" "ScreenRecorder" "Calculator" "CleanMaster" "Calendar" "Compass" "Notes" "MediaEditor" "Scanner" "XiaoAISpeechEngine" "wps-lite")
+    kept_data_apps=("Weather" "DeskClock" "Gallery" "SoundRecorder" "ScreenRecorder" "Calculator" "Calendar" "Compass" "Notes" "MediaEditor" "XiaoAISpeechEngine")
     for app in "${kept_data_apps[@]}"; do
         mv build/portrom/images/product/data-app/*"${app}"* tmp/app/ >/dev/null 2>&1
         done
