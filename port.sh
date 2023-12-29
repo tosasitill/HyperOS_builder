@@ -702,9 +702,9 @@ for i in $(find build/portrom/images -type f -name "build.prop");do
     
 done
 
+# 修复各种疑难杂症
 echo "ro.miui.cust_erofs=0" >> build/portrom/images/product/etc/build.prop
-
-#Fix： mi10 boot stuck at the first screen
+echo "ro.crypto.state=encrypted" >> build/portrom/images/system/system/build.prop
 sed -i "s/persist\.sys\.millet\.cgroup1/#persist\.sys\.millet\.cgroup1/" build/portrom/images/vendor/build.prop
 
 # Millet fix
